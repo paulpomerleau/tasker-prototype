@@ -38,5 +38,5 @@ You can also include ES6 modules, tasker will load all named functions for you
 
 ## Todo 
 - [ ] need a different name
-- [ ] accomodate external scripts (url)
+- [x] accomodate external scripts (url)
 - [ ] provide global config for things like pool management
