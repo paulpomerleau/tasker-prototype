@@ -41,57 +41,73 @@
       <div id="progress-bar"></div>
     </div>
     <!-- just to show that you can still interact with the UI during a heavy task -->
-    <iframe
-      src="https://en.wikipedia.org/wiki/Ballmer_Peak"
-    ></iframe>
+    <iframe src="https://en.wikipedia.org/wiki/Ballmer_Peak"></iframe>
     <script>
-      const bar = document.getElementById("progress-bar");
-
-      /** if you try to count to a trillion and maintain a progress bar w/o tasker, the browser will freeze eg:
-        for (let i = 0; i < 1000000000000; i++) {
-          const log = i % progress === 0;
-          if (log) {
-            bar.style.width = `${progress * 100}%`;
+      window.addEventListener('load', async () => {
+        
+        const bar = document.getElementById("progress-bar");
+  
+        /** if you try to count to a trillion and maintain a progress bar w/o tasker, the browser will freeze eg:
+          for (let i = 0; i < 1000000000000; i++) {
+            const log = i % progress === 0;
+            if (log) {
+              bar.style.width = `${progress * 100}%`;
+            }
           }
-        }
-       */
+         */
+  
+        /**
+         * we can use tasker instead to offload the task to another thread, unblocking the UI
+         * first we register a named function with tasker
+         * the function must be async, first param is whatever args you need
+         * the second param is a task object with the following properties:
+         * - resolve: a function to call when the task is complete
+         * - reject: a function to call when the task fails
+         * - postMessage: a function to call when you want send an update to the main thread via onmessage
+         */
+        tasker.register(async function count(
+          { until = 100, progress = 1 },
+          task
+        ) {
+          const { resolve, reject, postMessage } = task;
+          for (let i = 0; i < until; i++) {
+            const log = i % progress === 0;
+            if (log) postMessage(i / until);
+          }
+          resolve("done");
+        });
+  
+        /** we can also register all functions from an ES6 module */
+        await tasker.register('/greeter.js');
+  
+        /**
+         * now we can call the function we registered with tasker by calling tasker.[functionName]
+         * the function returns a promise that resolves when the task is complete (or rejects if it fails)
+         * we can use onmessage to get updates from the task and update the progress bar
+         */
+        tasker
+          .count({
+            until: 1000000000000,
+            progress: 2500,
+            onmessage: (progress) => {
+              bar.style.width = `${progress * 100}%`;
+            },
+          })
+          .then(console.log)
+          .catch(console.error);
+  
+          // we can also call all named functions from a module 
+          tasker
+            .greeter({ name: 'Bob', onmessage: console.log })
+            .then(console.log)
+            .catch(console.error);
+  
+          tasker
+            .nextBirthday({ name: 'Bob', month: 5, day: 1, onmessage: console.log })
+            .then(console.log)
+            .catch(console.error);
+      })
 
-      /**
-       * we can use tasker instead to offload the task to another thread, unblocking the UI
-       * first we register a named function with tasker
-       * the function must be async, first param is whatever args you need
-       * the second param is a task object with the following properties:
-       * - resolve: a function to call when the task is complete
-       * - reject: a function to call when the task fails
-       * - postMessage: a function to call when you want send an update to the main thread via onmessage
-       */
-      tasker.register(async function count(
-        { until = 100, progress = 1 },
-        task
-      ) {
-        const { resolve, reject, postMessage } = task;
-        for (let i = 0; i < until; i++) {
-          const log = i % progress === 0;
-          if (log) postMessage(i / until);
-        }
-        resolve("done");
-      });
-
-      /**
-       * now we can call the function we registered with tasker by calling tasker.[functionName]
-       * the function returns a promise that resolves when the task is complete (or rejects if it fails)
-       * we can use onmessage to get updates from the task and update the progress bar
-       */
-      tasker
-        .count({
-          until: 1000000000000,
-          progress: 2500,
-          onmessage: (progress) => {
-            bar.style.width = `${progress * 100}%`;
-          },
-        })
-        .then(console.log)
-        .catch(console.error);
     </script>
   </body>
 </html>
