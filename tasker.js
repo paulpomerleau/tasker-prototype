@@ -1,13 +1,7 @@
 const tasker = (() => {
   const functions = {};
 
-  /**
-   * @name register
-   * @description registers a function to be used by the tasker
-   * @param {(args: Record<string, any>, task: { resolve: Promise.resolve, reject: Promise.reject, postMessage: Worker.postMessage }) => Promise<any>} function to register
-   * @returns {void}
-   */
-  const register = function (func) {
+  const registerFunction = function (func) {
     if (typeof func !== "function") {
       throw new Error("Function must be a function");
     }
@@ -20,7 +14,34 @@ const tasker = (() => {
       throw new Error("Function must be async");
     }
 
+    if (functions[func.name]) {
+      throw new Error(`Function ${func.name} already registered`);
+    }
+
     functions[func.name] = func.toString();
+  }
+
+  const registerModule = async function (href) {
+    const module = await import(href);
+    Object.keys(module).forEach(async (key) => {
+      if (typeof module[key] === "function" && module[key].name) {
+        await registerFunction(module[key]);
+      }
+    });
+  }
+
+  /**
+   * @name register
+   * @description registers a function to be used by the tasker
+   * @param {(args: Record<string, any>, task: { resolve: Promise.resolve, reject: Promise.reject, postMessage: Worker.postMessage }) => Promise<any>} function to register
+   * @returns {void|Promise<void>}
+   */
+  const register = async function (source) {
+    if (typeof source === "function") {
+      return registerFunction(source);
+    } else if (typeof source === "string") {  
+      return registerModule(source);
+    }
   };
 
   const run = function (func, { onmessage, ...args }) {

@@ -25,6 +25,16 @@ Include the tasker.js, register your function, use it.
         .then(() => console.log('done'))
         .catch(console.error);
 ```
+You can also include ES6 modules, tasker will load all named functions for you
+```
+    await tasker.register('greeter.js');
+
+    tasker.greeter({ name, onmessage: console.log });
+    // Hello Bob!
+
+    tasker.nextBirthday({ name: 'Bob', month: 5, day: 1, onmessage: console.log });
+    // Hello Bob! Your birthday is in 95 days!
+```
 
 ## Todo 
 - [ ] need a different name
